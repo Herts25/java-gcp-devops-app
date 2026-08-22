@@ -33,7 +33,18 @@ pipeline {
             steps {
                 sh 'mvn test'
             }
+            
         }
+        stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh '''
+                mvn clean verify sonar:sonar \
+                -Dsonar.projectKey=java-gcp-devops-app
+            '''
+        }
+    }
+}
 
         stage('Package') {
             steps {
