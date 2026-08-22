@@ -36,8 +36,19 @@ pipeline {
 
         }
 
-        
+
       stage('SonarQube-Analysis') {
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh '''
+                mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                -Dsonar.projectKey=java-gcp-devops-app
+            '''
+        }
+    }
+}
+
+stage('SonarQube-Analysis') {
     steps {
         withSonarQubeEnv('SonarQube') {
             sh '''
