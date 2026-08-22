@@ -10,7 +10,9 @@ pipeline {
     environment {
         PROJECT_ID = 'gcp-automation-aug-26'
         REGION = 'us-central1'
-        GAR_REPO = 'java-app-repo'
+        GAR_REPO = 'java-devops-repo'
+        IMAGE_NAME = 'java-gcp-devops-app'
+        
     }
 
     stages {
