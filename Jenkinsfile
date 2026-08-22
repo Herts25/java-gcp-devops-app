@@ -2,12 +2,11 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven'
         jdk 'JDK17'
+        maven 'Maven'
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -20,7 +19,7 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
+        stage('Test') {
             steps {
                 sh 'mvn test'
             }
@@ -35,11 +34,11 @@ pipeline {
 
     post {
         success {
-            echo 'Build completed successfully!'
+            echo 'Pipeline completed successfully.'
         }
 
         failure {
-            echo 'Build failed. Check the console output.'
+            echo 'Pipeline failed. Check the console output.'
         }
     }
 }
