@@ -6,6 +6,12 @@ pipeline {
         maven 'Maven'
     }
 
+    environment {
+        PROJECT_ID = 'gcp-automation-aug-26'
+        REGION = 'us-central1'
+        GAR_REPO = 'java-app-repo'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -41,6 +47,37 @@ pipeline {
         stage('Docker Verify') {
             steps {
                 sh 'docker images | grep java-gcp-devops-app'
+            }
+        }
+
+        stage('GAR Login') {
+            steps {
+                withCredentials([
+                    file(credentialsId: 'gcp-service-account-key', variable: 'GCP_KEY')
+                ]) {
+                    sh '''
+                        gcloud auth activate-service-account --key-file=$GCP_KEY
+                        gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
+                    '''
+                }
+            }
+        }
+
+        stage('Tag Image') {
+            steps {
+                sh '''
+                    docker tag java-gcp-devops-app:${BUILD_NUMBER} \
+                    $REGION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/java-gcp-devops-app:${BUILD_NUMBER}
+                '''
+            }
+        }
+
+        stage('Push to GAR') {
+            steps {
+                sh '''
+                    docker push \
+                    $REGION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/java-gcp-devops-app:${BUILD_NUMBER}
+                '''
             }
         }
     }
