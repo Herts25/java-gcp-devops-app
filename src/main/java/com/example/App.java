@@ -17,7 +17,7 @@ public class App {
         server.createContext("/", exchange -> {
 
             String response =
-                    "Hello from GCP DevOps Pipeline - Running in Docker!";
+                    "Hello Siva - Running in Docker!";
 
             byte[] responseBytes =
                     response.getBytes(StandardCharsets.UTF_8);

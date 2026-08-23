@@ -45,7 +45,7 @@ public class AppTest {
             );
 
             assertEquals(
-                    "Hello from GCP DevOps Pipeline - Running in Docker!",
+                    "Hello Siva - Running in Docker!",
                     response
             );
 
