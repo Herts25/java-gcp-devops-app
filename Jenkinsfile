@@ -11,6 +11,9 @@ pipeline {
         REGION = 'us-central1'
         REPOSITORY = 'java-devops-repo'
         IMAGE_NAME = 'java-gcp-devops-app'
+
+        NEXUS_HOST = '10.10.0.4:8082'
+
         TEST_VM_IP = '10.10.0.2'
         TEST_VM_USER = 'devopsazure96'
     }
@@ -62,13 +65,18 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
+                sh '''
+                    docker build \
+                    -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                '''
             }
         }
 
         stage('Docker Verify') {
             steps {
-                sh 'docker images | grep ${IMAGE_NAME}'
+                sh '''
+                    docker images | grep ${IMAGE_NAME}
+                '''
             }
         }
 
@@ -79,41 +87,76 @@ pipeline {
                     variable: 'GCP_KEY'
                 )]) {
                     sh '''
-                        gcloud auth activate-service-account --key-file=$GCP_KEY
-                        gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+                        gcloud auth activate-service-account \
+                        --key-file=$GCP_KEY
+
+                        gcloud auth configure-docker \
+                        ${REGION}-docker.pkg.dev \
+                        --quiet
                     '''
                 }
             }
         }
 
-        stage('Tag Image') {
-            steps {
-                sh '''
-                    docker tag ${IMAGE_NAME}:${BUILD_NUMBER} \
-                    ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
-                '''
-            }
-        }
+        stage('Push Docker Image') {
+            parallel {
 
-        stage('Push to GAR') {
-            steps {
-                sh '''
-                    docker push \
-                    ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
-                '''
+                stage('Push to GAR') {
+                    steps {
+                        sh '''
+                            docker tag \
+                            ${IMAGE_NAME}:${BUILD_NUMBER} \
+                            ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
+
+                            docker push \
+                            ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+
+                stage('Push to Nexus') {
+                    steps {
+                        withCredentials([
+                            usernamePassword(
+                                credentialsId: 'nexus-credentials',
+                                usernameVariable: 'NEXUS_USER',
+                                passwordVariable: 'NEXUS_PASSWORD'
+                            )
+                        ]) {
+                            sh '''
+                                echo "$NEXUS_PASSWORD" | docker login \
+                                ${NEXUS_HOST} \
+                                -u "$NEXUS_USER" \
+                                --password-stdin
+
+                                docker tag \
+                                ${IMAGE_NAME}:${BUILD_NUMBER} \
+                                ${NEXUS_HOST}/${IMAGE_NAME}:${BUILD_NUMBER}
+
+                                docker push \
+                                ${NEXUS_HOST}/${IMAGE_NAME}:${BUILD_NUMBER}
+                            '''
+                        }
+                    }
+                }
             }
         }
 
         stage('Deploy to Test') {
             steps {
                 sh '''
-                    ssh -o StrictHostKeyChecking=no ${TEST_VM_USER}@${TEST_VM_IP} "
-                        docker pull ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER} &&
+                    ssh -o StrictHostKeyChecking=no \
+                    ${TEST_VM_USER}@${TEST_VM_IP} "
+
+                        docker pull \
+                        ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER} &&
+
                         docker rm -f java-app-test || true
+
                         docker run -d \
-                            --name java-app-test \
-                            -p 8081:8080 \
-                            ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
+                        --name java-app-test \
+                        -p 8081:8080 \
+                        ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
                     "
                 '''
             }
@@ -124,8 +167,11 @@ pipeline {
                 sh '''
                     sleep 5
 
-                    ssh -o StrictHostKeyChecking=no ${TEST_VM_USER}@${TEST_VM_IP} "
+                    ssh -o StrictHostKeyChecking=no \
+                    ${TEST_VM_USER}@${TEST_VM_IP} "
+
                         docker ps | grep java-app-test &&
+
                         curl -f http://localhost:8081
                     "
                 '''
@@ -134,6 +180,7 @@ pipeline {
     }
 
     post {
+
         success {
             echo 'Pipeline completed successfully!'
         }
