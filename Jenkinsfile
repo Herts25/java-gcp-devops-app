@@ -11,6 +11,8 @@ pipeline {
         REGION = 'us-central1'
         REPOSITORY = 'java-devops-repo'
         IMAGE_NAME = 'java-gcp-devops-app'
+        TEST_VM_IP = '10.10.0.2'
+        TEST_VM_USER = 'devopsazure96'
     }
 
     stages {
@@ -98,6 +100,34 @@ pipeline {
                 sh '''
                     docker push \
                     ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
+                '''
+            }
+        }
+
+        stage('Deploy to Test') {
+            steps {
+                sh '''
+                    ssh -o StrictHostKeyChecking=no ${TEST_VM_USER}@${TEST_VM_IP} "
+                        docker pull ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER} &&
+                        docker rm -f java-app-test || true
+                        docker run -d \
+                            --name java-app-test \
+                            -p 8081:8080 \
+                            ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}
+                    "
+                '''
+            }
+        }
+
+        stage('Verify Test Deployment') {
+            steps {
+                sh '''
+                    sleep 5
+
+                    ssh -o StrictHostKeyChecking=no ${TEST_VM_USER}@${TEST_VM_IP} "
+                        docker ps | grep java-app-test &&
+                        curl -f http://localhost:8081
+                    "
                 '''
             }
         }
