@@ -20,28 +20,39 @@ public class AppTest {
     void testHttpServer() throws Exception {
 
         HttpServer server = App.createServer(0);
-        server.start();
 
-        int port = server.getAddress().getPort();
+        try {
+            server.start();
 
-        URL url = new URL("http://localhost:" + port + "/");
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
+            int port = server.getAddress().getPort();
 
-        connection.setRequestMethod("GET");
+            URL url =
+                    new URL("http://localhost:" + port + "/");
 
-        assertEquals(200, connection.getResponseCode());
+            HttpURLConnection connection =
+                    (HttpURLConnection) url.openConnection();
 
-        String response = new String(
-                connection.getInputStream().readAllBytes(),
-                StandardCharsets.UTF_8
-        );
+            connection.setRequestMethod("GET");
 
-        assertEquals(
-                "Hello from GCP DevOps Pipeline - Running in Docker!",
-                response
-        );
+            assertEquals(
+                    200,
+                    connection.getResponseCode()
+            );
 
-        server.stop(0);
+            String response = new String(
+                    connection.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8
+            );
+
+            assertEquals(
+                    "Hello from GCP DevOps Pipeline - Running in Docker!",
+                    response
+            );
+
+            connection.disconnect();
+
+        } finally {
+            server.stop(0);
+        }
     }
 }
