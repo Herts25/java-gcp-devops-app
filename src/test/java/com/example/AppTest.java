@@ -45,7 +45,7 @@ public class AppTest {
             );
 
             assertEquals(
-                    "Hello Siva - Running in Docker!",
+                    "Hello Siva - From Telford!",
                     response
             );
 
