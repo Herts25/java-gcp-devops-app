@@ -45,7 +45,7 @@ public class AppTest {
             );
 
             assertEquals(
-                    "Hello World - From Telford!",
+                    "Hello People - From Telford!",
                     response
             );
 
