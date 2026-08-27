@@ -17,7 +17,7 @@ public class App {
         server.createContext("/", exchange -> {
 
             String response =
-                    "Hello People - From Telford!";
+                    "Hello all - From Telford!";
 
             byte[] responseBytes =
                     response.getBytes(StandardCharsets.UTF_8);
